@@ -6,11 +6,11 @@ A blockchain-based seed authentication system using computer vision and multi-bl
 
 **Start the System**
 ```bash
-docker-compose -f docker-compose.block_server.yml up
+docker-compose up
 ```
 
 The system will start:
-- **Frontend**: http://localhost:3000
+- **Frontend**: http://localhost:3001
 - **Backend API**: http://localhost:8000
 - **ML Server**: http://localhost:8001
 - **Fabric Blockchain**: http://localhost:3001

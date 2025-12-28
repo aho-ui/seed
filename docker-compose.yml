@@ -15,10 +15,90 @@ services:
     logging:
       driver: "none"
 
+  orderer.example.com:
+    container_name: orderer.example.com
+    image: ghcr.io/aho-ui/fabric-orderer-seed:latest
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:7053
+      - ORDERER_OPERATIONS_LISTENADDRESS=orderer.example.com:9443
+      - ORDERER_METRICS_PROVIDER=prometheus
+    working_dir: /root
+    command: orderer
+    ports:
+      - 7050:7050
+      - 7053:7053
+      - 9443:9443
+    networks:
+      - seed_network
+
+  peer0.org1.example.com:
+    container_name: peer0.org1.example.com
+    image: ghcr.io/aho-ui/fabric-peer-org1-seed:latest
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=seed_seed_network
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.org1.example.com
+      - CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.org1.example.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:7051
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.org1.example.com:9444
+      - CORE_METRICS_PROVIDER=prometheus
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0org1"}
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+    working_dir: /root
+    command: peer node start
+    ports:
+      - 7051:7051
+      - 9444:9444
+    depends_on:
+      - orderer.example.com
+    networks:
+      - seed_network
+
+  fabric-client:
+    container_name: fabric-client
+    image: ghcr.io/aho-ui/fabric-client-seed:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - peer0.org1.example.com
+      - orderer.example.com
+    networks:
+      - seed_network
+
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/aho-ui/seed-backend:latest
     container_name: seed_backend
     depends_on:
       - postgres
@@ -41,9 +121,7 @@ services:
       - seed_network
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/aho-ui/seed-frontend:latest
     container_name: seed_frontend
     depends_on:
       - backend
@@ -53,9 +131,7 @@ services:
       - seed_network
 
   ml-server:
-    build:
-      context: ./ml_server
-      dockerfile: Dockerfile
+    image: ghcr.io/aho-ui/seed-ml-server:latest
     container_name: seed_ml_server
     ports:
       - "8001:8001"
@@ -127,8 +203,7 @@ services:
       driver: "none"
 
   seed-tp:
-    build:
-      context: ./blockchain_sawtooth/cc
+    image: ghcr.io/aho-ui/seed-tp:latest
     container_name: seed-tp
     depends_on:
       - sawtooth-validator
@@ -137,9 +212,7 @@ services:
       - seed_network
 
   sawtooth-client:
-    build:
-      context: ./blockchain_sawtooth
-      dockerfile: Dockerfile
+    image: ghcr.io/aho-ui/sawtooth-client:latest
     container_name: sawtooth-client
     depends_on:
       - sawtooth-rest-api
