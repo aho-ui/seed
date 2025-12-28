@@ -1,0 +1,12 @@
+FROM hyperledger/fabric-peer:2.5
+
+ARG ORG=org1
+
+RUN rm -rf /etc/hyperledger/fabric/msp/admincerts/*
+
+COPY peer-msp-working /etc/hyperledger/fabric/msp
+COPY peer-tls-working /etc/hyperledger/fabric/tls
+COPY peer-${ORG}-production /var/hyperledger/production
+
+WORKDIR /root
+CMD ["peer", "node", "start"]

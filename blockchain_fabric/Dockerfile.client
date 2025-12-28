@@ -1,0 +1,31 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Install dependencies
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Copy client application
+COPY fabric_client.js /app/
+
+COPY organizations-working/peerOrganizations/org1.example.com /app/organizations/peerOrganizations/org1.example.com
+
+# Create package.json with dependencies
+RUN echo '{\n\
+  "name": "fabric-client",\n\
+  "version": "1.0.0",\n\
+  "description": "Fabric Gateway Client API",\n\
+  "main": "fabric_client.js",\n\
+  "dependencies": {\n\
+    "@hyperledger/fabric-gateway": "^1.4.0",\n\
+    "@grpc/grpc-js": "^1.9.0",\n\
+    "express": "^4.18.2"\n\
+  }\n\
+}' > package.json
+
+# Install npm dependencies
+RUN npm install
+
+EXPOSE 3000
+
+CMD ["node", "fabric_client.js"]

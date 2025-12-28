@@ -1,0 +1,158 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    container_name: seed_postgres
+    environment:
+      POSTGRES_DB: seed_db
+      POSTGRES_USER: seed_user
+      POSTGRES_PASSWORD: seed_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - seed_network
+    logging:
+      driver: "none"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: seed_backend
+    depends_on:
+      - postgres
+      - ml-server
+    environment:
+      DATABASE_URL: postgresql://seed_user:seed_password@postgres:5432/seed_db
+      POSTGRES_DB: seed_db
+      POSTGRES_USER: seed_user
+      POSTGRES_PASSWORD: seed_password
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      url: http://ml-server:8001
+      FABRIC_URL: http://host.docker.internal:3000
+      SAWTOOTH_URL: http://sawtooth-client:9000
+    ports:
+      - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - seed_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: seed_frontend
+    depends_on:
+      - backend
+    ports:
+      - "3001:3001"
+    networks:
+      - seed_network
+
+  ml-server:
+    build:
+      context: ./ml_server
+      dockerfile: Dockerfile
+    container_name: seed_ml_server
+    ports:
+      - "8001:8001"
+    networks:
+      - seed_network
+
+  # Sawtooth services
+  sawtooth-validator:
+    image: hyperledger/sawtooth-validator:latest
+    container_name: sawtooth-validator
+    expose:
+      - 4004
+    ports:
+      - "4004:4004"
+    entrypoint: "bash -c \"\
+        sawadm keygen && \
+        sawtooth keygen my_key && \
+        sawset genesis -k /root/.sawtooth/keys/my_key.priv && \
+        sawset proposal create \
+          -k /root/.sawtooth/keys/my_key.priv \
+          sawtooth.consensus.algorithm.name=Devmode \
+          sawtooth.consensus.algorithm.version=0.1 \
+          -o config.batch && \
+        sawadm genesis config-genesis.batch config.batch && \
+        sawtooth-validator -vv \
+          --endpoint tcp://sawtooth-validator:8800 \
+          --bind component:tcp://eth0:4004 \
+          --bind network:tcp://eth0:8800 \
+          --bind consensus:tcp://eth0:5050 \
+        \""
+    networks:
+      - seed_network
+    logging:
+      driver: "none"
+
+  sawtooth-devmode:
+    image: hyperledger/sawtooth-devmode-engine-rust:latest
+    container_name: sawtooth-devmode
+    depends_on:
+      - sawtooth-validator
+    entrypoint: devmode-engine-rust -C tcp://sawtooth-validator:5050
+    networks:
+      - seed_network
+    logging:
+      driver: "none"
+
+  sawtooth-rest-api:
+    image: hyperledger/sawtooth-rest-api:latest
+    container_name: sawtooth-rest-api
+    ports:
+      - "8008:8008"
+    depends_on:
+      - sawtooth-validator
+    entrypoint: sawtooth-rest-api -C tcp://sawtooth-validator:4004 --bind sawtooth-rest-api:8008
+    networks:
+      - seed_network
+    logging:
+      driver: "none"
+
+  sawtooth-settings-tp:
+    image: hyperledger/sawtooth-settings-tp:latest
+    container_name: sawtooth-settings-tp
+    depends_on:
+      - sawtooth-validator
+    entrypoint: settings-tp -vv -C tcp://sawtooth-validator:4004
+    networks:
+      - seed_network
+    logging:
+      driver: "none"
+
+  seed-tp:
+    build:
+      context: ./blockchain_sawtooth/cc
+    container_name: seed-tp
+    depends_on:
+      - sawtooth-validator
+    command: python3 seed.py
+    networks:
+      - seed_network
+
+  sawtooth-client:
+    build:
+      context: ./blockchain_sawtooth
+      dockerfile: Dockerfile
+    container_name: sawtooth-client
+    depends_on:
+      - sawtooth-rest-api
+    ports:
+      - "9000:9000"
+    environment:
+      VALIDATOR_URL: http://sawtooth-rest-api:8008
+    networks:
+      - seed_network
+
+volumes:
+  postgres_data:
+
+networks:
+  seed_network:
+    driver: bridge

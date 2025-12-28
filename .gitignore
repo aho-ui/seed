@@ -1,0 +1,87 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+.venv39/
+venv/
+ENV/
+env/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+*.pot
+
+# Machine Learning
+dataset/
+*.pth
+*.pt
+*.onnx
+*.h5
+*.pkl
+*.joblib
+runs/
+wandb/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker
+.docker/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Environment
+.env
+.env.local
+*.env
+
+# Project specific
+.sketch/
+.project/
+.context/
+.claude/
+
+# Node (frontend)
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+
+# Blockchain data
+blockchain_fabric/wallet/
+blockchain_fabric/organizations/
+blockchain_sawtooth/keys/
+blockchain_sawtooth/data/
+blockchain_sawtooth/logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Markdown and text files
+*.md
+*.txt

@@ -1,0 +1,8 @@
+django
+python-dotenv
+psycopg2-binary
+pgvector
+django-cors-headers
+requests
+Pillow
+ecdsa

@@ -1,0 +1,10 @@
+FROM hyperledger/fabric-orderer:2.5
+
+RUN rm -rf /var/hyperledger/orderer/msp/admincerts/*
+
+COPY orderer-msp-working /var/hyperledger/orderer/msp
+COPY orderer-tls-working /var/hyperledger/orderer/tls
+COPY orderer-production /var/hyperledger/production
+
+WORKDIR /root
+CMD ["orderer"]

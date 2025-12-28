@@ -1,0 +1,15 @@
+frontend/
+ml_server/
+blockchain_fabric/
+blockchain_sawtooth/
+dataset/
+media/
+.venv/
+__pycache__/
+*.pyc
+.git/
+*.ipynb
+*.log
+.project/
+.context/
+docker-compose*.yml
