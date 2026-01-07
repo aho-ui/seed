@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Header, Depends
 from pydantic import BaseModel
 import io
 import time
@@ -8,8 +8,16 @@ from datetime import datetime
 import torch
 import torch.nn.functional as F
 import numpy as np
+import os
 
 app = FastAPI()
+
+ML_API_KEY = os.getenv('ML_API_KEY', 'default-dev-key')
+
+async def verify_api_key(x_api_key: str = Header(...)):
+    if x_api_key != ML_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    return x_api_key
 
 
 def log(msg):
@@ -123,7 +131,7 @@ class Ping(BaseModel):
 
 
 
-@app.post("/predict/")
+@app.post("/predict/", dependencies=[Depends(verify_api_key)])
 async def predict(file: UploadFile = File(...)):
     """
     Two-stage inference:
@@ -213,3 +221,9 @@ async def predict(file: UploadFile = File(...)):
     except Exception as e:
         log(f"ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    log("Starting ML Server on http://0.0.0.0:8001")
+    uvicorn.run(app, host="0.0.0.0", port=8001)

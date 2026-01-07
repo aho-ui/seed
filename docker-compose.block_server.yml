@@ -1,20 +1,4 @@
 services:
-  postgres:
-    image: pgvector/pgvector:pg18
-    container_name: seed_postgres
-    environment:
-      POSTGRES_DB: seed_db
-      POSTGRES_USER: seed_user
-      POSTGRES_PASSWORD: seed_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql
-    networks:
-      - seed_network
-    logging:
-      driver: "none"
-
   orderer.example.com:
     container_name: orderer.example.com
     image: ghcr.io/aho-ui/fabric-orderer-seed:latest
@@ -56,7 +40,7 @@ services:
     environment:
       - FABRIC_LOGGING_SPEC=INFO
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
-      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=seed_seed_network
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=seed_network
       - CORE_PEER_TLS_ENABLED=true
       - CORE_PEER_PROFILE_ENABLED=false
       - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
@@ -97,51 +81,30 @@ services:
     networks:
       - seed_network
 
-  backend:
-    image: ghcr.io/aho-ui/seed_backend:v2
-    container_name: seed_backend
-    depends_on:
-      - postgres
-      - ml-server
+  postgres:
+    image: pgvector/pgvector:pg18
+    container_name: seed_postgres
     environment:
-      DATABASE_URL: postgresql://seed_user:seed_password@postgres:5432/seed_db
       POSTGRES_DB: seed_db
       POSTGRES_USER: seed_user
       POSTGRES_PASSWORD: seed_password
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      url: http://ml-server:8001
-      FABRIC_URL: http://host.docker.internal:3000
-      SAWTOOTH_URL: http://sawtooth-client:9000
-      ML_API_KEY: ${ML_API_KEY:-default-dev-key}
     ports:
-      - "8000:8000"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
     networks:
       - seed_network
-
-  frontend:
-    image: ghcr.io/aho-ui/seed_frontend:v2
-    container_name: seed_frontend
-    depends_on:
-      - backend
-    ports:
-      - "3001:3001"
-    networks:
-      - seed_network
+    logging:
+      driver: "none"
 
   ml-server:
     image: ghcr.io/aho-ui/seed-ml-server:latest
     container_name: seed_ml_server
-    environment:
-      ML_API_KEY: ${ML_API_KEY:-default-dev-key}
     ports:
       - "8001:8001"
     networks:
       - seed_network
 
-  # Sawtooth services
   sawtooth-validator:
     image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator
@@ -150,15 +113,15 @@ services:
     ports:
       - "4004:4004"
     entrypoint: "bash -c \"\
-        sawadm keygen && \
-        sawtooth keygen my_key && \
-        sawset genesis -k /root/.sawtooth/keys/my_key.priv && \
+        sawadm keygen || true && \
+        sawtooth keygen my_key || true && \
+        sawset genesis -k /root/.sawtooth/keys/my_key.priv || true && \
         sawset proposal create \
           -k /root/.sawtooth/keys/my_key.priv \
           sawtooth.consensus.algorithm.name=Devmode \
           sawtooth.consensus.algorithm.version=0.1 \
-          -o config.batch && \
-        sawadm genesis config-genesis.batch config.batch && \
+          -o config.batch || true && \
+        sawadm genesis config-genesis.batch config.batch || true && \
         sawtooth-validator -vv \
           --endpoint tcp://sawtooth-validator:8800 \
           --bind component:tcp://eth0:4004 \
@@ -167,8 +130,6 @@ services:
         \""
     networks:
       - seed_network
-    logging:
-      driver: "none"
 
   sawtooth-devmode:
     image: hyperledger/sawtooth-devmode-engine-rust:latest
@@ -178,8 +139,6 @@ services:
     entrypoint: devmode-engine-rust -C tcp://sawtooth-validator:5050
     networks:
       - seed_network
-    logging:
-      driver: "none"
 
   sawtooth-rest-api:
     image: hyperledger/sawtooth-rest-api:latest

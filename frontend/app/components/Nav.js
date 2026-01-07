@@ -7,6 +7,7 @@ export default function Nav() {
       <Link href="/history">History</Link>
       <Link href="/database">Database</Link>
       <Link href="/certify">Certify</Link>
+      <Link href="/records">Records</Link>
       <Link href="/verify">Verify</Link>
     </nav>
   )

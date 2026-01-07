@@ -24,13 +24,16 @@ BLOCKCHAIN_TYPE = {
     "sawtooth": os.getenv("SAWTOOTH_URL", "http://localhost:9000")
 }
 
+ML_API_KEY = os.getenv('ML_API_KEY', 'default-dev-key')
+
 
 # ============== Helper Functions ==============
 
 def get_inference(image_file):
     """Call ML server for inference and return detections"""
     files = {"file": image_file}
-    response = requests.post(f"{COLAB_URL}/predict/", files=files, timeout=30)
+    headers = {"X-API-Key": ML_API_KEY}
+    response = requests.post(f"{COLAB_URL}/predict/", files=files, headers=headers, timeout=30)
     response.raise_for_status()
 
     data = response.json()
@@ -75,12 +78,12 @@ def create_annotated_image(image_file, detections):
         bbox = detection.get("bbox")
         if bbox:
             x1, y1, x2, y2 = bbox
-            # Draw rectangle
-            draw.rectangle([x1, y1, x2, y2], outline="green", width=3)
+            # Draw rectangle with dark blue color and very thick lines
+            draw.rectangle([x1, y1, x2, y2], outline="#1e3a8a", width=20)
 
             # Draw label
             label = f"{detection.get('class', 'unknown')} {detection.get('confidence', 0):.2f}"
-            draw.text((x1, y1 - 10), label, fill="green")
+            draw.text((x1, y1 - 10), label, fill="#1e3a8a")
 
     # Convert to base64
     buffer = io.BytesIO()
@@ -323,10 +326,12 @@ def verify_seed(request):
                         bc_response = requests.get(f"{url}/verify/{similar_seed.id}", timeout=10)
                         if bc_response.status_code == 200:
                             stored_record = bc_response.json()
+                            # Use tx_id from database if blockchain client doesn't return it
+                            tx_id = stored_record.get("transactionId") or similar_seed.blockchain_tx_id
                             blockchain_results[blockchain_name] = {
                                 "found": True,
                                 "certified": stored_record["hash"] == new_hash,
-                                "tx_id": stored_record.get("transactionId"),
+                                "tx_id": tx_id,
                                 "timestamp": stored_record["timestamp"],
                                 "signer_name": stored_record.get("signerName")
                             }

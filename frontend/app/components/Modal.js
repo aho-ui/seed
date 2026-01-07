@@ -1,12 +1,13 @@
 'use client'
 
-export default function Modal({ image, onClose }) {
-  if (!image) return null
+export default function Modal({ image, onClose, children }) {
+  // Support both image modal and children modal
+  if (!image && !children) return null
 
   return (
     <div className="modal" onClick={onClose}>
-      <div className="modal-content">
-        <img src={image} alt="Enlarged view" />
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        {children ? children : <img src={image} alt="Enlarged view" />}
       </div>
 
       <style jsx>{`
