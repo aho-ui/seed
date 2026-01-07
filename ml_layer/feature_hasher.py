@@ -2,7 +2,7 @@ from ecdsa import SigningKey, VerifyingKey, SECP256k1
 import hashlib
 
 # Dictionary of authorized signers (nurseries/certifiers)
-# In production, this would be loaded from a database or config file
+
 SIGNERS = {
     "Nursery_A": {
         "name": "Green Valley Nursery",

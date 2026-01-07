@@ -78,12 +78,9 @@ def create_annotated_image(image_file, detections):
         bbox = detection.get("bbox")
         if bbox:
             x1, y1, x2, y2 = bbox
-            # Draw rectangle with dark blue color and very thick lines
-            draw.rectangle([x1, y1, x2, y2], outline="#1e3a8a", width=20)
-
-            # Draw label
-            label = f"{detection.get('class', 'unknown')} {detection.get('confidence', 0):.2f}"
-            draw.text((x1, y1 - 10), label, fill="#1e3a8a")
+            offset = 2
+            draw.rectangle([x1-offset, y1-offset, x2+offset, y2+offset], outline="#000000", width=16)
+            draw.rectangle([x1, y1, x2, y2], outline="#4caf50", width=12)
 
     # Convert to base64
     buffer = io.BytesIO()
